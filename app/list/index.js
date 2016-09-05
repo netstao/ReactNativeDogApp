@@ -14,11 +14,13 @@ import {
   Image,
   Dimensions,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  AlertIOS
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import request from '../common/request'
 import config from '../common/config'
+import Detail from './detail'
 
 const width = Dimensions.get('window').width;
 
@@ -38,11 +40,38 @@ class Item extends Component {
       row: row
     }
   }
+  _up () {
+    var up = !this.state.up
+    var row = this.state.row
+    var url = config.api.base + config.api.up
+    var that = this
+    var body = {
+      id: row._id,
+      up : up ? 'yes' : 'no',
+      accountToken: 'aaa'
+    }
+    console.log(url, body)
+    request.post(url, body)
+    .then((data) => {
+      if(data && data.success){
+        that.setState({
+          up: up
+        })
+      }
+      else {
+        AlertIOS.alert('点赞失败，稍后重试')
+      }
+    })
+    .catch((err) => {
+      console.log(err)
+      AlertIOS.alert('点赞失败，稍后重试')
+    })
+  }
 
   render () {
     var rowData = this.state.row
     return (
-      <TouchableHighlight>
+      <TouchableHighlight onPress={this.props.onSelect}>
         <View style={styles.item}>
           <Text style={styles.title}>{rowData.title}</Text>
           <Image source={{uri: rowData.thumb}} 
@@ -56,10 +85,11 @@ class Item extends Component {
           <View style={styles.itemFooter}>
             <View style={styles.handleBox}>
               <Icon
-                name="ios-heart-outline"
+                name={ this.state.up ? 'ios-heart' : "ios-heart-outline"}
                 size={28}
-                style={styles.up} />
-                <Text style={styles.handleText}>喜欢</Text>
+                onPress={this._up.bind(this)}
+                style={[styles.up, this.state.up ? null : styles.down]} />
+                <Text style={styles.handleText} onPress={this._up.bind(this)}>喜欢</Text>
             </View>
             <View style={styles.handleBox}>
               <Icon
@@ -91,6 +121,16 @@ class List extends Component {
 
   componentDidMount() {
     this._fetchData(1)
+  }
+
+  _loadPage(row) {
+    this.props.navigator.push({
+      name: 'detail',
+      component: Detail,
+      params: {
+        data:row
+      }
+    })
   }
 
   _fetchData(page){
@@ -154,7 +194,7 @@ class List extends Component {
   _renderRow (rowData) {
 
     return (
-      <Item row={rowData} />
+      <Item  key={rowData._id} onSelect={ () => this._loadPage(rowData)} row={rowData} />
     )
   }
 
@@ -289,7 +329,11 @@ const styles = StyleSheet.create({
   },
   up:{
     fontSize:22,
-    color:'#333'
+    color:'#ed7b66'
+  },
+  down:{
+    fontSize:22,
+    color: '#333'
   },
   commentIcon:{
     fontSize:22,

@@ -11,7 +11,8 @@ import {
   StyleSheet,
   Text,
   View,
-  TabBarIOS
+  TabBarIOS,
+  Navigator
 } from 'react-native';
 
 import List from './app/list/index'
@@ -41,7 +42,19 @@ class dogApp extends Component {
               selectedTab: 'List',
             });
           }}>
-          <List />
+          <Navigator 
+           initialRoute = {{
+            name: 'list',
+            component: List
+           }}
+           configureScene={(route) => {
+            return Navigator.SceneConfigs.FloatFromRight
+           }}
+           renderScene={(route, navigator) => {
+            var Component = route.component
+            return <Component {...route.params} navigator={navigator} />
+           }}
+           />
         </Icon.TabBarItemIOS>
         <Icon.TabBarItemIOS
           systemIcon="history"

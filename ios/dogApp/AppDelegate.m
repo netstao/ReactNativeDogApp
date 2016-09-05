@@ -11,7 +11,7 @@
 
 #import "RCTBundleURLProvider.h"
 #import "RCTRootView.h"
-
+#import <AVFoundation/AVFoundation.h>  // import
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
@@ -20,6 +20,7 @@
   
   
   NSURL *jsCodeLocation;
+  [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryAmbient error:nil];  // allow
 
   jsCodeLocation = [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@"index.ios" fallbackResource:nil];
 
@@ -32,9 +33,7 @@
   self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
   UIViewController *rootViewController = [UIViewController new];
   
-//  UIWebView *webView = [[UIWebView alloc] initWithFrame:self.window.frame];
-//  [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"http://www.baidu.com"]]];
-//  webView.backgroundColor = [UIColor redColor];
+  
   
   rootViewController.view = rootView;
   self.window.rootViewController = rootViewController;
