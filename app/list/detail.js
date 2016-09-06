@@ -52,7 +52,8 @@ class Detail extends Component {
   _onProgress(data){
     if (!this.state.videoLoaded){
       this.setState({
-        videoLoaded : true
+        videoLoaded : true,
+        paused:true
       })
     }
     var duration = data.playableDuration
@@ -214,7 +215,8 @@ const styles = StyleSheet.create({
     marginRight:5
   },
   backText:{
-    color:'#999'
+    color:'#999',
+    marginBottom:2
   },
   videoBox:{
     width:width,
