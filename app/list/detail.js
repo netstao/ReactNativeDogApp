@@ -11,19 +11,42 @@ import {
   View,
   Dimensions,
   ActivityIndicator,
-  TouchableOpacity
+  TouchableOpacity,
+  ScrollView,
+  Image,
+  ListView,
+  TextInput,
+  Modal,
+  AlertIOS
 } from 'react-native';
-import  Video from 'react-native-video';
+import Video from 'react-native-video';
+import Button from 'react-native-button';
 import Icon from 'react-native-vector-icons/Ionicons';
+import request from '../common/request'
+import config from '../common/config'
 
 const width = Dimensions.get('window').width;
+
+var cachedResults = {
+  nextPage: 1,
+  items: [],
+  total: 0
+}
+
 
 class Detail extends Component {
 
   constructor(props) {
     super(props);
+    this._setModalVisible.bind(this)
+    var ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2})
+
+
     this.state={
       data: this.props.data,
+      dataSource: ds.cloneWithRows([]),
+      modalVisible:false,
+      animationType:'none',
       rate: 1,
       muted: false,
       resizeMode: 'contain',
@@ -34,7 +57,10 @@ class Detail extends Component {
       currentTime:0,
       playing:false,
       paused:false,
-      videoOk: true
+      videoOk: true,
+      isLoading:false,
+      content:'',
+      isSending: false
     }
   }
 
@@ -72,8 +98,6 @@ class Detail extends Component {
       newState.playing  = true
     }
     this.setState(newState)
-    console.log('load _onProgress',data)
-
   }
 
   _onEnd () {
@@ -112,12 +136,208 @@ class Detail extends Component {
       })
     }
   }
-  _pop(){
+  componentDidMount(){
+    this._fetchData(1)
+  }
 
+  _fetchData(page){
+    this.setState({
+      isLoading: true
+    })
+
+    var that = this
+    var url = config.api.base + config.api.comments
+    console.log(url)
+    request.get(url, {
+      accountToken: '111',
+      viedo_id:'12',
+      page: page
+    })
+    .then((data) => {
+      if(data.success){
+        var items = cachedResults.items.slice()
+        items = items.concat(data.data)
+        cachedResults.nextPage += 1
+        cachedResults.items = items
+        cachedResults.total = data.total
+        this.setState({
+          dataSource: this.state.dataSource.cloneWithRows(cachedResults.items)
+        })
+
+        setTimeout(() => {
+          this.setState({
+            isLoading:false
+          })
+        },20)
+      } else {
+        console.log(data)
+      }
+    })
+    .catch((error) => {
+      that.setState({
+        isLoading:false
+      })
+      
+      console.warn(error);
+    });
+  }
+
+  _fetchMoreData () {
+    console.log('loading ', !this._hasMore() || this.state.isLoading)
+    if (!this._hasMore() || this.state.isLoading) {
+      return
+    }
+
+    var page = cachedResults.nextPage
+    this._fetchData(page)
+  }
+
+  _hasMore() {
+    return cachedResults.items.length !== cachedResults.total
+  }
+
+  _readerFooter () {
+    if (!this._hasMore() && cachedResults.total !== 0) {
+      return (
+        <View style={styles.loadingMore}>
+        <Text style={styles.loadingText}>没有更多了</Text>
+        </View>
+        )
+    }
+    if(!this.state.isLoading){
+      return (<View style={styles.loadingMore}/>)
+    }
+    return (
+      <ActivityIndicator
+        style={styles.loadingMore}
+      />
+    )
+  }
+
+
+  _renderRow(row) {
+    if(row) {
+      return (
+      <View key={row._id} style={styles.replyBox}>
+        <Image style={styles.replyAvatar} source={{uri: row.replyBy.avatar}}/>
+          <View style={styles.reply}>
+            <Text style={styles.replayNickname}>{row.replyBy.nickname}</Text>
+            <Text style={styles.replyContent}>{row.content}</Text>
+          </View>
+      </View>
+      )
+    }
+  }
+
+  _renderHeader (){
+    var data = this.state.data
+    return (
+      <View style={styles.listHeader}>
+        <View style={styles.infoBox}>
+          <Image style={styles.avatar} source={{uri: data.author.avatar}}/>
+            <View style={styles.descBox}>
+              <Text style={styles.nickname}>{data.author.nickname}</Text>
+              <Text style={styles.title}>{data.title}</Text>
+            </View>
+        </View>
+        <View style={styles.commentBox}>
+          <View style={styles.comment}>
+            <TextInput 
+            style={styles.content}
+            placeholder='好喜欢这个狗狗'
+            multiline={true}
+            onFocus={this._focus.bind(this)}
+            />
+          </View>
+          <View style={styles.commentArea}>
+            <Text style={styles.CommentTitle}>精彩评论</Text>
+          </View>
+        </View>
+      </View>
+    )
+  }
+
+   _setModalVisible(isVisible){
+
+    this.setState({
+      modalVisible:isVisible
+    })
+  }
+
+  _focus() {
+    console.log(this)
+    this._setModalVisible(true)
+  }
+
+  
+  _blur(){
+
+  }
+  _closeModal(){
+    
+    this._setModalVisible(false)
+  }
+
+  _submit(){
+    if (!this.state.content) {
+      return AlertIOS.alert('留言不能为空')
+    }
+
+    if(!this.state.isSending) {
+      return AlertIOS.alert('正在评论中！')
+    }
+
+    this.setState({
+      isSending:true
+    }, () => {
+      var body = {
+        accountToken:'1',
+        viedo_id:'123',
+        content:this.state.content
+      }
+
+      var url = config.api.base + config.api.comments
+
+      var that  = this
+
+      request.post(url, body)
+      .then((data) => {
+        console.log(data)
+        if(data && data.success){
+          var items = cachedResults.items.slice()
+          var content = that.state.content
+
+          items = [{
+            content: content,
+            replyBy:{
+              avatar:'',
+              nickname:'狗狗说'
+            }
+          }].concat(items)
+
+          cachedResults.items = items
+          cachedResults.total = cachedResults.total+1
+
+          that.setState({
+            content:'',
+            isSending:false,
+            dataSource:that.state.dataSource.cloneWithRows(cachedResults.items)
+          })
+
+          that._setModalVisible(false)
+        }
+      })
+      .catch((error)=>{
+        that.setState({
+          isSending:false
+        })
+        that._setModalVisible(false)
+        AlertIOS.alert('留言失败，稍后重试')
+      })
+    })
   }
   render() {
     var data = this.state.data
-    console.log(data)
     return(
       <View style={styles.container}>
         <View style={styles.header}>
@@ -125,7 +345,7 @@ class Detail extends Component {
             <Icon name='ios-arrow-back' style={styles.backIcon} />
             <Text style={styles.backText}>返回</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOflines={2}>{data.title}</Text>
+          <Text style={styles.headerTitle} numberOflines={2}>视频详情</Text>
         </View>
       <View style={styles.videoBox}>
         <Video
@@ -144,7 +364,7 @@ class Detail extends Component {
           onProgress={this._onProgress.bind(this)}
           onEnd={this._onEnd.bind(this)}
           onError={this._onError.bind(this)}
-          />
+        />
           {
             !this.state.videoOk && <Text style={styles.failText}>视频出错了！很抱歉</Text>
           }
@@ -174,6 +394,50 @@ class Detail extends Component {
             <View style={[styles.progressBar, {width: width * this.state.videoProgress}]}></View>
           </View>
         </View>
+        <ListView
+          dataSource={this.state.dataSource}
+          renderRow={this._renderRow.bind(this)}
+          renderFooter={this._readerFooter.bind(this)}
+          renderHeader={this._renderHeader.bind(this)}
+          onEndReached={this._fetchMoreData.bind(this)}
+          enableEmptySections={true}
+          pageSize={10}
+          onEndReachedThreshold={20}
+          automaticallyAdjustContentInsets={false}
+          showsVerticalScrollIndicator={false}
+        />
+        <View style={styles.commentArea}>
+                  <Text style={styles.CommentTitle}>精彩评论</Text>
+                </View>
+        <Modal
+          animationType={'fade'}
+          visible={this.state.modalVisible}
+          onRequestClose={() => {this._setModalVisible.bind(this)}}
+          >
+          <View style={styles.modalContainer}>
+            <Icon
+             onPress={this._closeModal.bind(this)}
+             name='ios-close-outline'
+             style={styles.closeIcon}/>
+             <View style={styles.commentBox}>
+              <View style={styles.comment}>
+                <TextInput 
+                style={styles.content}
+                placeholder='好喜欢这个狗狗'
+                multiline={true}
+                defaultValue={this.state.content}
+                onChangeText={(Text)=>{
+                  this.setState({
+                    content:Text,
+                    isSending:true
+                  })
+                }}
+                />
+                </View>
+              </View>
+              <Button style={styles.submitBtn} onPress={this._submit.bind(this)}>评论</Button>
+          </View>
+          </Modal>
     </View>
     )
   }
@@ -196,6 +460,18 @@ const styles = StyleSheet.create({
     borderBottomWidth:1,
     borderColor:'rgba(0, 0, 0, 0.1)',
     backgroundColor:'#fff'
+  },
+  submitBtn:{
+    width: width - 20,
+    padding:16,
+    marginTop:20,
+    marginBottom:20,
+    alignSelf:'center',
+    borderWidth:1,
+    borderColor:'#ee753c',
+    borderRadius:4,
+    fontSize:18,
+    color:'#ee753c'
   },
   backBox:{
     position:'absolute',
@@ -220,18 +496,19 @@ const styles = StyleSheet.create({
   },
   videoBox:{
     width:width,
-    height:360,
-    backgroundColor:'#000'
+    height:width * 0.56,
+    backgroundColor:'#000',
+    zIndex:99
   },
   video:{
     width:width,
-    height:360,
+    height:width * 0.56,
     backgroundColor:'#000'
   },
   loading:{
     position: 'absolute',
     left:0,
-    top:140,
+    top:80,
     width:width,
     alignSelf: 'center',
     backgroundColor:'transparent'
@@ -248,7 +525,7 @@ const styles = StyleSheet.create({
   },
   playIcon:{
     position: 'absolute',
-    top:140,
+    top:90,
     left:width/2 -30,
     width:60,
     height:60,
@@ -265,11 +542,11 @@ const styles = StyleSheet.create({
     left:0,
     top:0,
     width:width,
-    height:360
+    height:width * 0.56
   },
   resumeIcon:{
     position: 'absolute',
-    top:140,
+    top:80,
     left:width/2 -30,
     width:60,
     height:60,
@@ -284,11 +561,106 @@ const styles = StyleSheet.create({
   failText:{
     position: 'absolute',
     left:0,
-    top:180,
+    top:90,
     width:width,
     color:'#fff',
     textAlign: 'center',
     backgroundColor:'transparent'
+  },
+  infoBox:{
+    width:width,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 10    
+  },
+  avatar:{
+    width:60,
+    height:60,
+    marginRight:10,
+    marginLeft:10,
+    borderRadius:30
+  },
+  descBox:{
+    flex:1
+  },
+  nickname:{
+    fontSize:18
+  },
+  title:{
+    marginTop:8,
+    fontSize:16,
+    color:'#666'
+  },
+  replyBox:{
+    flexDirection:'row',
+    justifyContent:'flex-start',
+    marginBottom: 10
+  },
+  replyAvatar:{
+    width:40,
+    height:40,
+    marginRight:10,
+    marginLeft:10,
+    borderRadius:20
+  },
+  replyNickname:{
+    color:'#666'
+  },
+  replyContent:{
+    marginTop:4,
+    color:'#666'
+  },
+  reply:{
+    flex:1
+  },
+  loadingMore: {
+    marginVertical: 20
+  },
+  loadingText: {
+    color: '#777',
+    textAlign:'center'
+  },
+  commentBox:{
+    marginTop:10,
+    padding:8,
+    width:width
+  },
+  listHeader:{
+    width:width,
+    marginTop:10
+  },
+  content:{
+    paddingLeft:2,
+    color:'#333',
+    borderWidth:1,
+    borderColor:'#ddd',
+    borderRadius:4,
+    fontSize:14,
+    height:80,
+    paddingLeft:8
+  },
+  commentArea:{
+    width:width,
+    marginTop:10,
+    paddingBottom:8,
+    paddingTop:8,
+    paddingLeft:10,
+    paddingRight:10,
+    borderBottomWidth:1,
+    borderBottomColor:'#eee'
+  },
+  CommentTitle:{
+    fontSize:16
+  },
+  modalContainer:{
+    flex:1,
+    paddingTop:45,
+    backgroundColor:'#fff'
+  },
+  closeIcon:{
+    alignSelf:'center',
+    fontSize:30,
+    color:'#ee753c'
   }
 });
 
