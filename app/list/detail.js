@@ -310,7 +310,7 @@ class Detail extends Component {
           items = [{
             content: content,
             replyBy:{
-              avatar:'',
+              avatar:'http://dummyimage.com/120x120/d1f279',
               nickname:'狗狗说'
             }
           }].concat(items)
