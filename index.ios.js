@@ -62,14 +62,18 @@ class dogApp extends Component {
 
   _afterLogin(user){
     user = JSON.stringify(user)
-    var that = this
-    AsyncStorage.setItem('user',user)
-    .then(()=>{
-      that.setState({
-        logined:true,
-        user:user
+    if(user){
+      var that = this
+      AsyncStorage.setItem('user',user)
+      .then(()=>{
+        that.setState({
+          logined:true,
+          user:user
+        })
       })
-    })
+    } else {
+
+    }
   }
 
 
@@ -94,7 +98,8 @@ class dogApp extends Component {
           <Navigator 
            initialRoute = {{
             name: 'list',
-            component: List
+            component: List,
+            title:'list'
            }}
            configureScene={(route) => {
             return Navigator.SceneConfigs.FloatFromRight
