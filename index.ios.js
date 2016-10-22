@@ -62,6 +62,7 @@ class dogApp extends Component {
 
   _afterLogin(user){
     user = JSON.stringify(user)
+
     if(user){
       var that = this
       AsyncStorage.setItem('user',user)

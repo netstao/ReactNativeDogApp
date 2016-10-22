@@ -13,10 +13,14 @@ import {
   Dimensions,
   AsyncStorage,
   Image,
-  Platform
+  Platform,
+  AlertIOS
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import ImagePicker from 'react-native-image-picker';
+import sha1 from 'sha1';
+import request from '../common/request'
+import config from '../common/config'
 
 const width = Dimensions.get('window').width;
 
@@ -32,7 +36,22 @@ var photoOptions = {
     skipBackup: true,
     path: 'images'
   }
+};
+
+var CLOUDINARY = {
+  cloud_name: 'dog',
+  api_key: '744474146883937',
+  api_secret: 'xTBrBf4HTPu605sXycJPCcWJCTI',
+  base: 'https://api.cloudinary.com/v1_1/dog/image/upload',
+  image: 'https://api.cloudinary.com/v1_1/dog/image/upload',
+  video: 'https://api.cloudinary.com/v1_1/dog/video/upload',
+  audio: 'https://api.cloudinary.com/v1_1/dog/raw/upload',
 }
+
+function avatar(id, type) {
+  return CLOUDINARY.base + '/' + type + 'upload' + id
+}
+
 class Account extends Component {
 
   constructor(props) {
@@ -53,15 +72,13 @@ class Account extends Component {
     .then((data) => {
       var user 
       var newState = {}
-
       if(data) {
-        user = JSON.parse(data)
+        user = data
+        console.log(data)
       }
-
       if(user && user.accessToken){
         newState.user = user
       }
-
       that.setState(newState)
     })
   }
@@ -80,16 +97,81 @@ class Account extends Component {
       var user = that.state.user
       user.avatar = avartarData
 
-      that.setState({
-        user:user
+      var timestamp = Date.now()
+      var tags = 'app,avatar'
+      var folder = 'avatar'
+      var signatureURL = config.api.base + config.api.signature
+      var accessToken = this.state.user.accessToken
+
+      request.post(signatureURL ,{
+        accessToken :accessToken,
+        timestamp: timestamp,
+        type: 'avatar',
+        folder: folder,
+        tags: tags
+      })
+      .then((data) => {
+        if(data && data.success) {
+          var signature = 'folder=' + folder + '&tags=' + tags + '&timestamp=' + timestamp + CLOUDINARY.api_secret
+          signature = sha1(signature)
+
+          var body = new FormData()
+
+          body.append('timestamp', timestamp)
+          body.append('folder', folder)
+          body.append('signature', signature)
+          body.append('tags', tags)
+          body.append('api_key', CLOUDINARY.api_key)
+          body.append('resource_type', 'image')
+          body.append('file',  avartarData)
+
+          that._upload(body)
+        }
       })
       
     })
   }
 
+  _upload(body){
+    console.log('body',body)
+    var xhr = new XMLHttpRequest()
+    var url = CLOUDINARY.image
+
+    var that = this
+    xhr.open('POST', url)
+    xhr.onload = () => {
+      if(xhr.status !== 200){
+        AlertIOS.alert('请求失败' + xhr.status)
+        return
+      }
+
+      if(!xhr.responseText) {
+        AlertIOS.alert('请求失败' + xhr.responseText)
+        return
+      }
+
+      var response
+      try {
+        response = JSON.parse(xhr.response)
+      }
+      catch (e) { 
+        console.log(e)
+      }
+
+      if(response && response.public_id) {
+        var user = this.state.user
+        user.avartar = avatar(response.public_id, 'image')
+
+        that.setState({
+          user:user
+        })
+      }  
+    }
+    xhr.send(body)
+  }
+
   render() {
     var user = this.state.user
-    console.log(user)
     return(
     <View style={styles.container}>
       <View style={styles.toolbar}>

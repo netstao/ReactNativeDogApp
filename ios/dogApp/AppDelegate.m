@@ -11,16 +11,12 @@
 
 #import "RCTBundleURLProvider.h"
 #import "RCTRootView.h"
-#import <AVFoundation/AVFoundation.h>  // import
+
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-  
-  
-  
   NSURL *jsCodeLocation;
-  [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryAmbient error:nil];  // allow
 
   jsCodeLocation = [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@"index.ios" fallbackResource:nil];
 
@@ -32,16 +28,9 @@
 
   self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
   UIViewController *rootViewController = [UIViewController new];
-  
-  
-  
   rootViewController.view = rootView;
   self.window.rootViewController = rootViewController;
-  
-//  [rootViewController.view addSubview:webView];
-  
   [self.window makeKeyAndVisible];
-  
   return YES;
 }
 

@@ -1,8 +1,8 @@
 package com.dogapp;
 
 import com.facebook.react.ReactActivity;
+import com.brentvatne.RCTVideo.ReactVideoPackage;
 import com.imagepicker.ImagePickerPackage;
-import com.brentvatne.react.ReactVideoPackage;
 import com.oblador.vectoricons.VectorIconsPackage;
 
 public class MainActivity extends ReactActivity {
