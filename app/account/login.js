@@ -45,6 +45,7 @@ class Login extends Component {
     }
     var that = this
     var verifyURL = config.api.base + config.api.verify
+    console.log(verifyURL)
     request.post(verifyURL, body)
     .then((data)=>{
       if(data && data.success){
@@ -79,6 +80,7 @@ class Login extends Component {
     }
     var that = this
     var signupURL = config.api.base + config.api.signup
+    console.log(signupURL)
     request.post(signupURL, body)
     .then((data)=>{
       if(data && data.success){

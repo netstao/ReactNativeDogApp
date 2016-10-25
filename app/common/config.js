@@ -15,6 +15,7 @@ export default {
 		comments:'/api/comments',
 		signup:'/api/u/signup',
 		verify:'/api/u/verify',
+		update:'/api/u/update',
 		signature:'/api/signature'
 	}
 }
