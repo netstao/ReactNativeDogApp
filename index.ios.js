@@ -27,13 +27,12 @@ class dogApp extends Component {
     super(props)
     this.state = {
       user:null,
-      selectedTab: 'List',
+      selectedTab: 'Account',
       logined:false
     }
   }
 
   componentDidMount() {
-    console.log('ss',AsyncStorage)
     this._asyncAppStatus()
   }
 
@@ -61,11 +60,10 @@ class dogApp extends Component {
   }
 
   _afterLogin(user){
-    user = JSON.stringify(user)
-
+    var userStr = JSON.stringify(user)
     if(user){
       var that = this
-      AsyncStorage.setItem('user',user)
+      AsyncStorage.setItem('user',userStr)
       .then(()=>{
         that.setState({
           logined:true,

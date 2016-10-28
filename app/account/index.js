@@ -23,6 +23,7 @@ import * as Progress from 'react-native-progress';
 import ImagePicker from 'react-native-image-picker';
 import Button from 'react-native-button';
 import sha1 from 'sha1';
+import uuid from 'uuid';
 import request from '../common/request'
 import config from '../common/config'
 
@@ -45,7 +46,6 @@ var photoOptions = {
 var CLOUDINARY = {
   cloud_name: 'dog',
   api_key: '744474146883937',
-  api_secret: 'xTBrBf4HTPu605sXycJPCcWJCTI',
   base: 'https://api.cloudinary.com/v1_1/dog/image/upload',
   image: 'https://api.cloudinary.com/v1_1/dog/image/upload',
   video: 'https://api.cloudinary.com/v1_1/dog/video/upload',
@@ -67,7 +67,6 @@ class Account extends Component {
 
   constructor(props) {
     super(props)
-    console.log(this.props.user)
     var user = this.props.user || {}
     this.state = {
       user: user,
@@ -108,6 +107,47 @@ class Account extends Component {
     })
   }
 
+  getQiniuToken () {
+     request.post(signatureURL ,{
+        accessToken :accessToken,
+        timestamp: timestamp,
+        type: 'avatar'
+      })
+      .then((data) => {
+        console.log(data)
+        if(data && data.success) {
+
+          var signature = data.data
+
+          var body = new FormData()
+
+          body.append('timestamp', timestamp)
+          body.append('folder', folder)
+          body.append('signature', signature)
+          body.append('tags', tags)
+          body.append('api_key', CLOUDINARY.api_key)
+          body.append('resource_type', 'image')
+          body.append('file',  avartarData)
+
+          that._upload(body)
+        }
+      })
+  }
+
+   _getQiniuToken (accessToken, key) {
+
+   var signatureURL = config.api.base + config.api.signature
+   return request.post(signatureURL ,{
+      accessToken :accessToken,
+      key: key,
+      type: 'avatar'
+    })
+    .catch((err) => {
+      console.log(err)
+      }
+    })
+  }
+
   _pickerPhoto () {
 
     var that = this
@@ -123,36 +163,58 @@ class Account extends Component {
       var timestamp = Date.now()
       var tags = 'app,avatar'
       var folder = 'avatar'
-      var signatureURL = config.api.base + config.api.signature
+      
       var accessToken = this.state.user.accessToken
 
-      request.post(signatureURL ,{
-        accessToken :accessToken,
-        timestamp: timestamp,
-        type: 'avatar',
-        folder: folder,
-        tags: tags
-      })
+      var uri = response.uri
+      var key = uuid.v4() + '.png'
+
+      console.log(signatureURL)
+     
+
+     that._getQiniuToken(accessToken ,key)
       .then((data) => {
+        console.log(data)
         if(data && data.success) {
-          var signature = 'folder=' + folder + '&tags=' + tags + '&timestamp=' + timestamp + CLOUDINARY.api_secret
-          signature = sha1(signature)
+          var token = data.data
 
           var body = new FormData()
 
-          body.append('timestamp', timestamp)
-          body.append('folder', folder)
-          body.append('signature', signature)
-          body.append('tags', tags)
-          body.append('api_key', CLOUDINARY.api_key)
-          body.append('resource_type', 'image')
-          body.append('file',  avartarData)
+          body.append('token', token)
+          body.append('file',  {
+            type: 'image/png',
+            uri: uri,
+            name :key
+          })
 
           that._upload(body)
         }
-      })
-      
     })
+
+     // request.post(signatureURL ,{
+     //    accessToken :accessToken,
+     //    timestamp: timestamp,
+     //    type: 'avatar'
+     //  })
+     //  .then((data) => {
+     //    console.log(data)
+     //    if(data && data.success) {
+
+     //      var signature = data.data
+
+     //      var body = new FormData()
+
+     //      body.append('timestamp', timestamp)
+     //      body.append('folder', folder)
+     //      body.append('signature', signature)
+     //      body.append('tags', tags)
+     //      body.append('api_key', CLOUDINARY.api_key)
+     //      body.append('resource_type', 'image')
+     //      body.append('file',  avartarData)
+
+     //      that._upload(body)
+     //    }
+     //  })
   }
 
   _upload(body){

@@ -9,7 +9,8 @@ export default {
 		}
 	},
 	api: {
-		base: 'http://rap.taobao.org/mockjs/6990',
+		//base: 'http://rap.taobao.org/mockjs/6990',
+		base: 'http://localhost:8082',
 		list: '/api/list',
 		up: '/api/up',
 		comments:'/api/comments',
