@@ -23,7 +23,6 @@ import * as Progress from 'react-native-progress';
 import ImagePicker from 'react-native-image-picker';
 import Button from 'react-native-button';
 import sha1 from 'sha1';
-import uuid from 'uuid';
 import request from '../common/request'
 import config from '../common/config'
 
@@ -43,14 +42,6 @@ var photoOptions = {
   }
 };
 
-var CLOUDINARY = {
-  cloud_name: 'dog',
-  api_key: '744474146883937',
-  base: 'https://api.cloudinary.com/v1_1/dog/image/upload',
-  image: 'https://api.cloudinary.com/v1_1/dog/image/upload',
-  video: 'https://api.cloudinary.com/v1_1/dog/video/upload',
-  audio: 'https://api.cloudinary.com/v1_1/dog/raw/upload',
-}
 
 function avatar(id, type, v) {
   if (id.indexOf('http') > -1) {
@@ -59,8 +50,11 @@ function avatar(id, type, v) {
   if (id.indexOf('data:image') > -1) {
     return id
   }
+  if (id.indexOf('avatar/') > -1) {
+    return config.cloudinary.base + '/' + type + 'upload/v'+ v + id
+  }
 
-  return CLOUDINARY.base + '/' + type + 'upload/v'+ v + id
+  return 'http://ofpfhpkbp.bkt.clouddn.com/' + id
 }
 
 class Account extends Component {
@@ -125,7 +119,7 @@ class Account extends Component {
           body.append('folder', folder)
           body.append('signature', signature)
           body.append('tags', tags)
-          body.append('api_key', CLOUDINARY.api_key)
+          body.append('api_key', config.cloudinary.api_key)
           body.append('resource_type', 'image')
           body.append('file',  avartarData)
 
@@ -134,17 +128,16 @@ class Account extends Component {
       })
   }
 
-   _getQiniuToken (accessToken, key) {
+   _getQiniuToken () {
 
+   var accessToken = this.state.user.accessToken
    var signatureURL = config.api.base + config.api.signature
    return request.post(signatureURL ,{
       accessToken :accessToken,
-      key: key,
-      type: 'avatar'
+      cloud: 'qiniu'
     })
     .catch((err) => {
       console.log(err)
-      }
     })
   }
 
@@ -164,32 +157,32 @@ class Account extends Component {
       var tags = 'app,avatar'
       var folder = 'avatar'
       
-      var accessToken = this.state.user.accessToken
+      
 
       var uri = response.uri
-      var key = uuid.v4() + '.png'
 
-      console.log(signatureURL)
      
 
-     that._getQiniuToken(accessToken ,key)
-      .then((data) => {
-        console.log(data)
-        if(data && data.success) {
-          var token = data.data
+      that._getQiniuToken()
+        .then((data) => {
+          console.log(data)
+          if(data && data.success) {
+            var token = data.data.token
+            var key = data.data.key
 
-          var body = new FormData()
+            var body = new FormData()
 
-          body.append('token', token)
-          body.append('file',  {
-            type: 'image/png',
-            uri: uri,
-            name :key
-          })
+            body.append('token', token)
+            body.append('key', key)
+            body.append('file',  {
+              type: 'image/jpeg',
+              uri: uri,
+              name :key
+            })
 
-          that._upload(body)
-        }
-    })
+            that._upload(body)
+          }
+      })
 
      // request.post(signatureURL ,{
      //    accessToken :accessToken,
@@ -208,19 +201,20 @@ class Account extends Component {
      //      body.append('folder', folder)
      //      body.append('signature', signature)
      //      body.append('tags', tags)
-     //      body.append('api_key', CLOUDINARY.api_key)
+     //      body.append('api_key', config.cloudinary.api_key)
      //      body.append('resource_type', 'image')
      //      body.append('file',  avartarData)
 
      //      that._upload(body)
      //    }
      //  })
+    })
   }
 
-  _upload(body){
+  _upload (body) {
     console.log('body',body)
     var xhr = new XMLHttpRequest()
-    var url = CLOUDINARY.image
+    var url = config.qiniu.upload
     var that = this
     that.setState({
       avatarUploading:true,
@@ -232,6 +226,7 @@ class Account extends Component {
     xhr.onload = () => {
       if(xhr.status !== 200){
         AlertIOS.alert('请求失败' + xhr.status)
+        console.log(JSON.parse(xhr.response))
         return
       }
 
@@ -248,13 +243,18 @@ class Account extends Component {
       catch (e) { 
         console.log(e)
       }
+      console.log(response)
+      if(response) {
 
-      if(response && response.public_id) {
         var user = this.state.user
-        console.log(user)
-        user.avatar = response.url
-        console.log(user.avatar)
+        if(response.public_id) {
+          user.avatar = response.url
+        }
 
+        if(response.key) {
+          user.avatar = response.key
+        }
+      
         that.setState({
           avatarUploading:false,
           avatarProgress:0,
@@ -263,6 +263,7 @@ class Account extends Component {
         that._asyncUser(true)
       }
     }
+    
     if (xhr.upload) {
       xhr.upload.onprogress = (event) => {
         if(event.lengthComputable) {
