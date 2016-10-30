@@ -27,7 +27,7 @@ class dogApp extends Component {
     super(props)
     this.state = {
       user:null,
-      selectedTab: 'Account',
+      selectedTab: 'Edit',
       logined:false
     }
   }
